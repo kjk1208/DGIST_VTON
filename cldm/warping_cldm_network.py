@@ -10,7 +10,7 @@ from pytorch_lightning.utilities.types import STEP_OUTPUT
 import torch
 import torch as th
 import torch.nn as nn
-from cleanfid import fid
+# from cleanfid import fid
 from pytorch_lightning.utilities.distributed import rank_zero_only
 import torchvision.transforms as T
 import torch.nn.functional as F
