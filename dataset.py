@@ -179,7 +179,7 @@ class VITONHDDataset(Dataset):
                 self.img_W
             )
             agn_mask = imread(
-                opj(self.drd, self.data_type, "agnostic-mask", self.im_names[idx].replace(".jpg", "_mask.png")), 
+                opj(self.drd, self.data_type, "agnostic-mask", self.im_names[idx].replace('.jpg', '_mask.png')), 
                 self.img_H, 
                 self.img_W, 
                 is_mask=True, 
@@ -199,7 +199,7 @@ class VITONHDDataset(Dataset):
             )
             
             gt_cloth_warped_mask = imread(
-                opj(self.drd, self.data_type, "gt_cloth_warped_mask", self.im_names[idx]), 
+                opj(self.drd, self.data_type, "gt_cloth_warped_mask", self.im_names[idx].replace('.jpg', '.png')), 
                 self.img_H, 
                 self.img_W, 
                 is_mask=True
@@ -210,12 +210,12 @@ class VITONHDDataset(Dataset):
 
         else:
             agn = imread_for_albu(opj(self.drd, self.data_type, "agnostic-v3.2", self.im_names[idx]))
-            agn_mask = imread_for_albu(opj(self.drd, self.data_type, "agnostic-mask", self.im_names[idx].replace(".jpg", "_mask.png")), is_mask=True)
+            agn_mask = imread_for_albu(opj(self.drd, self.data_type, "agnostic-mask", self.im_names[idx].replace('.jpg', '_mask.png')), is_mask=True)
             cloth = imread_for_albu(opj(self.drd, self.data_type, "cloth", self.c_names[self.pair_key][idx]))
             cloth_mask = imread_for_albu(opj(self.drd, self.data_type, "cloth-mask", self.c_names[self.pair_key][idx]), is_mask=True, cloth_mask_check=True)
             
             gt_cloth_warped_mask = imread_for_albu(
-                opj(self.drd, self.data_type, "gt_cloth_warped_mask", self.im_names[idx]),
+                opj(self.drd, self.data_type, "gt_cloth_warped_mask", self.im_names[idx].replace('.jpg', '.png')),
                 is_mask=True
             ) if not self.is_test else np.zeros_like(agn_mask)
                 
