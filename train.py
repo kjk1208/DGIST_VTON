@@ -14,10 +14,14 @@ from cldm.logger import ImageLogger
 from cldm.model import create_model, load_state_dict
 from utils import save_args
 
+import torch
+torch.backends.cuda.enable_mem_efficient_sdp(False)
+torch.backends.cuda.enable_flash_sdp(False)
+
 def build_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_name", type=str, default=None)
-    parser.add_argument("--data_root_dir", type=str, default="./DATA/zalando-hd-resized")
+    parser.add_argument("--data_root_dir", type=str, default="./DATA/VITON-HD")
     parser.add_argument("--category", type=str, default=None, choices=["upper", "lower_body", "dresses"])
     parser.add_argument("--vae_load_path", type=str, default="./ckpts/VITONHD_VAE_finetuning.ckpt")
     parser.add_argument("--batch_size", "-bs",  type=int, default=32)
@@ -42,7 +46,7 @@ def build_args():
     parser.add_argument("--only_mid_control", action="store_true")
     parser.add_argument("--precision", type=int, default=16)
     parser.add_argument("--num_sanity_val_steps", type=int, default=0)
-    parser.add_argument("--pbe_train_mode", action="store_true")
+    parser.add_argument("--pbe_train_mode", action="store_true") 
 
     parser.add_argument("--lambda_simple", type=float, default=1.0)
     parser.add_argument("--control_scales", nargs="+", type=float, default=None)
@@ -193,7 +197,7 @@ def main_worker(args):
         logger=tb_logger, 
         devices=args.devices,
         accelerator="gpu", 
-        strategy="ddp", 
+        # strategy="ddp", 
         max_epochs=args.max_epochs, 
         accumulate_grad_batches=args.accum_iter, 
         check_val_every_n_epoch=args.valid_epoch_freq,

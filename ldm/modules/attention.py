@@ -296,7 +296,8 @@ class MemoryEfficientCrossAttention(nn.Module):
         )
 
         attn_loss = torch.tensor(0, dtype=x.dtype, device=x.device)
-        if use_attention_tv_loss and key_token_length > 700 and (not is_self_attn) and key_token_length < 3000 and use_loss:
+        #if use_attention_tv_loss and key_token_length > 700 and (not is_self_attn) and key_token_length < 3000 and use_loss:
+        if use_attention_tv_loss and key_token_length > 100 and (not is_self_attn) and key_token_length < 3000 and use_loss:
             sim = einsum('b i d, b j d -> b i j', q, k) * (self.dim_head ** -0.5)
             sim = sim.softmax(dim=-1)
             h = self.heads

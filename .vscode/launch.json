@@ -1,0 +1,24 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "train",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--config_name VITONHD",
+                "--transform_size shiftscale hflip",
+                "--transform_color hsv bright_contrast",
+                "--save_name Base",
+                "-resume_path ./ckpts/VITONHD_PBE_pose.ckpt",
+                "--max_epochs 1000",
+                "--save_every_n_epochs 100"
+            ]
+        }
+    ]
+}
