@@ -226,7 +226,7 @@ class CustomSpatialTransformer(nn.Module):
             return x + x_in
         else:
             return x + x_in, loss
-class VTON_BaseUNet(UNetModel):
+class StableVITON(UNetModel):
     def __init__(
         self,
         dim_head_denorm=1,
@@ -249,18 +249,30 @@ class VTON_BaseUNet(UNetModel):
             1280, 
             1280
         ]
-
+        
         self.encode_output_chs2 = [
             320,
             320,
-            320,
-            320,
-            640, 
-            640, 
             640,
+            640,
+            640,
+            1280, 
+            1280, 
             1280, 
             1280
         ]
+
+        # self.encode_output_chs2 = [
+        #     320,
+        #     320,
+        #     320,
+        #     320,
+        #     640, 
+        #     640, 
+        #     640,
+        #     1280, 
+        #     1280
+        # ]
 
         
         for idx, (in_ch, cont_ch) in enumerate(zip(self.encode_output_chs, self.encode_output_chs2)):
@@ -274,7 +286,7 @@ class VTON_BaseUNet(UNetModel):
                 context_dim=cont_ch,
                 use_linear=self.use_linear_in_transformer,
                 use_checkpoint=self.use_checkpoint,
-                use_loss=idx%3 == 1,
+                use_loss=idx%1 == 1,
             ))
             warp_zero_convs.append(self.make_zero_conv(in_ch))
         self.warp_flow_blks = nn.ModuleList(reversed(warp_flow_blks))
@@ -337,12 +349,11 @@ class VTON_BaseUNet(UNetModel):
             return output + x, 0
 
 
-class WarpingControlNet(UNetModel):
+class NoZeroConvControlNet(nn.Module):
     def __init__(
             self,
             image_size,
             in_channels,
-            out_channels,
             model_channels,
             hint_channels,
             num_res_blocks,
@@ -370,17 +381,8 @@ class WarpingControlNet(UNetModel):
             use_linear_in_transformer=False,
             use_VAEdownsample=False,
             cond_first_ch=8,
-            *args,
-            **kwargs,
     ):
-        super().__init__(image_size=image_size,
-                         in_channels=in_channels,
-                         model_channels=model_channels,
-                         out_channels=out_channels,
-                         num_res_blocks=num_res_blocks,
-                         attention_resolutions=attention_resolutions,
-                         num_heads=num_heads,                         
-                         *args, **kwargs)
+        super().__init__()
         if use_spatial_transformer:
             assert context_dim is not None, 'Fool!! You forgot to include the dimension of your cross-attention conditioning...'
 
@@ -564,78 +566,7 @@ class WarpingControlNet(UNetModel):
                 use_scale_shift_norm=use_scale_shift_norm,
             ),
         )
-        self._feature_size += ch
-        
-        
-        self.output_blocks = nn.ModuleList([])
-        for level, mult in list(enumerate(channel_mult))[::-1]:
-            for i in range(self.num_res_blocks[level] + 1):
-                ich = input_block_chans.pop()
-                layers = [
-                    ResBlock(
-                        ch + ich,
-                        time_embed_dim,
-                        dropout,
-                        out_channels=model_channels * mult,
-                        dims=dims,
-                        use_checkpoint=use_checkpoint,
-                        use_scale_shift_norm=use_scale_shift_norm,
-                    )
-                ]
-                ch = model_channels * mult
-                if ds in attention_resolutions:
-                    if num_head_channels == -1:
-                        dim_head = ch // num_heads
-                    else:
-                        num_heads = ch // num_head_channels
-                        dim_head = num_head_channels
-                    if legacy:
-                        #num_heads = 1
-                        dim_head = ch // num_heads if use_spatial_transformer else num_head_channels
-                    if exists(disable_self_attentions):
-                        disabled_sa = disable_self_attentions[level]
-                    else:
-                        disabled_sa = False
-
-                    if not exists(num_attention_blocks) or i < num_attention_blocks[level]:
-                        layers.append(
-                            AttentionBlock(
-                                ch,
-                                use_checkpoint=use_checkpoint,
-                                num_heads=num_heads_upsample,
-                                num_head_channels=dim_head,
-                                use_new_attention_order=use_new_attention_order,
-                            ) if not use_spatial_transformer else SpatialTransformer(
-                                ch, num_heads, dim_head, depth=transformer_depth, context_dim=context_dim,
-                                disable_self_attn=disabled_sa, use_linear=use_linear_in_transformer,
-                                use_checkpoint=use_checkpoint
-                            )
-                        )
-                if level and i == self.num_res_blocks[level]:
-                    out_ch = ch
-                    layers.append(
-                        ResBlock(
-                            ch,
-                            time_embed_dim,
-                            dropout,
-                            out_channels=out_ch,
-                            dims=dims,
-                            use_checkpoint=use_checkpoint,
-                            use_scale_shift_norm=use_scale_shift_norm,
-                            up=True,
-                        )
-                        if resblock_updown
-                        else Upsample(ch, conv_resample, dims=dims, out_channels=out_ch)
-                    )
-                    ds //= 2
-                self.output_blocks.append(TimestepEmbedSequential(*layers))
-                self._feature_size += ch
-
-        # self.out = nn.Sequential(
-        #     normalization(ch),
-        #     nn.SiLU(),
-        #     zero_module(conv_nd(dims, model_channels, self.out_channels, 3, padding=1)),
-        # )
+        self._feature_size += ch        
 
     def forward(self, x, hint, timesteps, context, only_mid_control=False, **kwargs):
         t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
@@ -662,12 +593,4 @@ class WarpingControlNet(UNetModel):
 
         h = self.middle_block(h, emb, context)
         outs.append(h)
-        
-        for module in self.output_blocks:
-            h = torch.cat([h, hs.pop()], dim=1)
-            h = module(h, emb, context)
-            outs.append(h)
-
-        #h = h.type(x.dtype)        
-        
         return outs, None

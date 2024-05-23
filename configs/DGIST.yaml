@@ -28,10 +28,11 @@ model:
     mask2_key: "agn_mask"
 
     control_stage_config:
-      target: cldm.warping_cldm_network.NoZeroConvControlNet
+      target: cldm.warping_cldm_network.WarpingControlNet
       params:
         image_size: 32 
         in_channels: 13
+        out_channels: 4       #kjk20240523
         hint_channels: 3
         model_channels: 320
         attention_resolutions: [ 4, 2, 1 ]
@@ -43,10 +44,10 @@ model:
         context_dim: 768
         use_checkpoint: True
         legacy: False
-        cond_first_ch: 4
+        cond_first_ch: 4        
 
     unet_config:
-      target: cldm.warping_cldm_network.StableVITON
+      target: cldm.warping_cldm_network.VTON_BaseUNet
       params:
         image_size: 32
         in_channels: 13
