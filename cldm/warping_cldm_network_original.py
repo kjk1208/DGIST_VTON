@@ -308,6 +308,7 @@ class StableVITON(UNetModel):
                 hs.append(h)
             h = self.middle_block(h, emb, context)
 
+#dd
         if control is not None:                 
             hint = control.pop()
         # resolution 8 is skipped
