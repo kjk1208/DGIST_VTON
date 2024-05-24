@@ -249,18 +249,30 @@ class VTON_BaseUNet(UNetModel):
             1280, 
             1280
         ]
-
+        
         self.encode_output_chs2 = [
             320,
             320,
-            320,
-            320,
-            640, 
-            640, 
             640,
+            640,
+            640,
+            1280, 
+            1280, 
             1280, 
             1280
         ]
+
+        # self.encode_output_chs2 = [
+        #     320,
+        #     320,
+        #     320,
+        #     320,
+        #     640, 
+        #     640, 
+        #     640,
+        #     1280, 
+        #     1280
+        # ]
 
         
         for idx, (in_ch, cont_ch) in enumerate(zip(self.encode_output_chs, self.encode_output_chs2)):
@@ -274,7 +286,7 @@ class VTON_BaseUNet(UNetModel):
                 context_dim=cont_ch,
                 use_linear=self.use_linear_in_transformer,
                 use_checkpoint=self.use_checkpoint,
-                use_loss=idx%3 == 1,
+                use_loss=idx%1 == 1,
             ))
             warp_zero_convs.append(self.make_zero_conv(in_ch))
         self.warp_flow_blks = nn.ModuleList(reversed(warp_flow_blks))
