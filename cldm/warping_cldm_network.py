@@ -238,14 +238,16 @@ class VTON_BaseUNet(UNetModel):
         warp_flow_blks = []
         warp_zero_convs = []
 
+
+        # # diffusion_model
         self.encode_output_chs = [
             320,
             320,
             640,
             640,
-            640,
-            1280, 
-            1280, 
+            640,    #1280
+            1280,   #1280
+            1280,   #
             1280, 
             1280
         ]
@@ -255,13 +257,14 @@ class VTON_BaseUNet(UNetModel):
             320,
             640,
             640,
-            640,
-            1280, 
-            1280, 
+            640,    #1280
+            1280,   #1280
+            1280,   #
             1280, 
             1280
         ]
-
+          
+        # control_model
         # self.encode_output_chs2 = [
         #     320,
         #     320,
@@ -274,19 +277,20 @@ class VTON_BaseUNet(UNetModel):
         #     1280
         # ]
 
+
         
         for idx, (in_ch, cont_ch) in enumerate(zip(self.encode_output_chs, self.encode_output_chs2)):
             dim_head = in_ch // self.num_heads
             dim_head = dim_head // dim_head_denorm
             warp_flow_blks.append(CustomSpatialTransformer(
-                in_channels=in_ch,
+                in_channels=in_ch,                  #controlnet encoder
                 n_heads=self.num_heads,
                 d_head=dim_head,
                 depth=self.transformer_depth,
-                context_dim=cont_ch,
+                context_dim=cont_ch,                #base unet decoder
                 use_linear=self.use_linear_in_transformer,
                 use_checkpoint=self.use_checkpoint,
-                use_loss=idx%1 == 1,
+                use_loss=idx%3 == 1,
             ))
             warp_zero_convs.append(self.make_zero_conv(in_ch))
         self.warp_flow_blks = nn.ModuleList(reversed(warp_flow_blks))
@@ -315,7 +319,7 @@ class VTON_BaseUNet(UNetModel):
             control.pop()
             h = torch.cat([h, hs.pop()], dim=1)
             h = module(h, emb, context)
-
+        # 13 - 4 = 9
         n_warp = len(self.encode_output_chs)
         for i, (module, warp_blk, warp_zc) in enumerate(zip(self.output_blocks[3:n_warp+3], self.warp_flow_blks, self.warp_zero_convs)):
             if control is None or (h.shape[-2] == 8 and h.shape[-1] == 6):
@@ -642,6 +646,13 @@ class WarpingControlNet(UNetModel):
                     ds //= 2
                 self.output_blocks.append(TimestepEmbedSequential(*layers))
                 self._feature_size += ch
+             
+        # print("========================self.input_blocks========================")
+        # print(self.input_blocks)
+        # print("========================self.middle_block========================")
+        # print(self.middle_block)
+        # print("========================self.output_blocks========================")
+        # print(self.output_blocks)
 
         # self.out = nn.Sequential(
         #     normalization(ch),
@@ -670,10 +681,15 @@ class WarpingControlNet(UNetModel):
             else:                                                
                 h = module(h, emb, context)
                 hs.append(h)
-            outs.append(h)
+            outs.append(h)            
+            
+            
+        # print(f"input : {len(outs)}")   # 12
 
         h = self.middle_block(h, emb, context)
         outs.append(h)
+        
+        # print(f"input + output block : {len(outs)}")    # 13
         
         for module in self.output_blocks:
             h = torch.cat([h, hs.pop()], dim=1)

@@ -922,7 +922,7 @@ ControlLDM(
         (2): Conv2d(320, 4, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
       )
       (warp_flow_blks): ModuleList(
-        (0-1): 2 x CustomSpatialTransformer(
+        (0-3): 4 x CustomSpatialTransformer(
           (norm): GroupNorm(32, 1280, eps=1e-06, affine=True)
           (proj_in): Conv2d(1280, 1280, kernel_size=(1, 1), stride=(1, 1))
           (transformer_blocks): ModuleList(
@@ -961,46 +961,7 @@ ControlLDM(
           )
           (proj_out): Conv2d(1280, 1280, kernel_size=(1, 1), stride=(1, 1))
         )
-        (2-3): 2 x CustomSpatialTransformer(
-          (norm): GroupNorm(32, 1280, eps=1e-06, affine=True)
-          (proj_in): Conv2d(1280, 1280, kernel_size=(1, 1), stride=(1, 1))
-          (transformer_blocks): ModuleList(
-            (0): CustomBasicTransformerBlock(
-              (attn1): MemoryEfficientCrossAttention(
-                (to_q): Linear(in_features=1280, out_features=1280, bias=False)
-                (to_k): Linear(in_features=1280, out_features=1280, bias=False)
-                (to_v): Linear(in_features=1280, out_features=1280, bias=False)
-                (to_out): Sequential(
-                  (0): Linear(in_features=1280, out_features=1280, bias=True)
-                  (1): Dropout(p=0.0, inplace=False)
-                )
-              )
-              (ff): FeedForward(
-                (net): Sequential(
-                  (0): GEGLU(
-                    (proj): Linear(in_features=1280, out_features=10240, bias=True)
-                  )
-                  (1): Dropout(p=0.0, inplace=False)
-                  (2): Linear(in_features=5120, out_features=1280, bias=True)
-                )
-              )
-              (attn2): MemoryEfficientCrossAttention(
-                (to_q): Linear(in_features=1280, out_features=1280, bias=False)
-                (to_k): Linear(in_features=640, out_features=1280, bias=False)
-                (to_v): Linear(in_features=640, out_features=1280, bias=False)
-                (to_out): Sequential(
-                  (0): Linear(in_features=1280, out_features=1280, bias=True)
-                  (1): Dropout(p=0.0, inplace=False)
-                )
-              )
-              (norm1): LayerNorm((1280,), eps=1e-05, elementwise_affine=True)
-              (norm2): LayerNorm((1280,), eps=1e-05, elementwise_affine=True)
-              (norm3): LayerNorm((1280,), eps=1e-05, elementwise_affine=True)
-            )
-          )
-          (proj_out): Conv2d(1280, 1280, kernel_size=(1, 1), stride=(1, 1))
-        )
-        (4): CustomSpatialTransformer(
+        (4-6): 3 x CustomSpatialTransformer(
           (norm): GroupNorm(32, 640, eps=1e-06, affine=True)
           (proj_in): Conv2d(640, 640, kernel_size=(1, 1), stride=(1, 1))
           (transformer_blocks): ModuleList(
@@ -1027,45 +988,6 @@ ControlLDM(
                 (to_q): Linear(in_features=640, out_features=640, bias=False)
                 (to_k): Linear(in_features=640, out_features=640, bias=False)
                 (to_v): Linear(in_features=640, out_features=640, bias=False)
-                (to_out): Sequential(
-                  (0): Linear(in_features=640, out_features=640, bias=True)
-                  (1): Dropout(p=0.0, inplace=False)
-                )
-              )
-              (norm1): LayerNorm((640,), eps=1e-05, elementwise_affine=True)
-              (norm2): LayerNorm((640,), eps=1e-05, elementwise_affine=True)
-              (norm3): LayerNorm((640,), eps=1e-05, elementwise_affine=True)
-            )
-          )
-          (proj_out): Conv2d(640, 640, kernel_size=(1, 1), stride=(1, 1))
-        )
-        (5-6): 2 x CustomSpatialTransformer(
-          (norm): GroupNorm(32, 640, eps=1e-06, affine=True)
-          (proj_in): Conv2d(640, 640, kernel_size=(1, 1), stride=(1, 1))
-          (transformer_blocks): ModuleList(
-            (0): CustomBasicTransformerBlock(
-              (attn1): MemoryEfficientCrossAttention(
-                (to_q): Linear(in_features=640, out_features=640, bias=False)
-                (to_k): Linear(in_features=640, out_features=640, bias=False)
-                (to_v): Linear(in_features=640, out_features=640, bias=False)
-                (to_out): Sequential(
-                  (0): Linear(in_features=640, out_features=640, bias=True)
-                  (1): Dropout(p=0.0, inplace=False)
-                )
-              )
-              (ff): FeedForward(
-                (net): Sequential(
-                  (0): GEGLU(
-                    (proj): Linear(in_features=640, out_features=5120, bias=True)
-                  )
-                  (1): Dropout(p=0.0, inplace=False)
-                  (2): Linear(in_features=2560, out_features=640, bias=True)
-                )
-              )
-              (attn2): MemoryEfficientCrossAttention(
-                (to_q): Linear(in_features=640, out_features=640, bias=False)
-                (to_k): Linear(in_features=320, out_features=640, bias=False)
-                (to_v): Linear(in_features=320, out_features=640, bias=False)
                 (to_out): Sequential(
                   (0): Linear(in_features=640, out_features=640, bias=True)
                   (1): Dropout(p=0.0, inplace=False)

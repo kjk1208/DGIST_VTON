@@ -132,12 +132,12 @@ def main_worker(args):
     
     #모델 구조 보기 20240522
 
-    print(model)
-    with open('model_structure.txt', 'w') as f:
-        f.write(str(model))
+    # print(model)
+    # with open('model_structure.txt', 'w') as f:
+    #     f.write(str(model))
     
-    # Exit the program
-    return
+    # # Exit the program
+    # return
     
     #모델 구조 보기 20240522
 

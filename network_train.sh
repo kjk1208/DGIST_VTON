@@ -11,7 +11,10 @@ python network_train.py \
  --transform_size shiftscale hflip \
  --transform_color hsv bright_contrast \
  --save_name Base \
- --resume_path /data/StableVITON/logs/20240326_Base/models/[Train]_[epoch=999]_[train_loss_epoch=0.0404].ckpt\
+ --resume_path ./ckpts/VITONHD_modified.ckpt \
  --max_epochs 1000 \
  --save_every_n_epochs 100 \
  --no_strict_load
+
+
+ #--resume_path /data/StableVITON/logs/20240326_Base/models/[Train]_[epoch=999]_[train_loss_epoch=0.0404].ckpt\
