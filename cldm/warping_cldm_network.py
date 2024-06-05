@@ -239,19 +239,20 @@ class VTON_BaseUNet(UNetModel):
         warp_zero_convs = []
 
 
-        # # diffusion_model
+        # diffusion_model decoder
         self.encode_output_chs = [
             320,
             320,
             640,
             640,
-            640,    #1280
+            640,    #
+            1280,   #640
             1280,   #1280
-            1280,   #
-            1280, 
-            1280
+            1280,   #1280
+            1280    #1280
         ]
         
+        # control_model encoder        
         self.encode_output_chs2 = [
             320,
             320,
@@ -263,8 +264,10 @@ class VTON_BaseUNet(UNetModel):
             1280, 
             1280
         ]
+        
+        
           
-        # control_model
+        # control_model encoder
         # self.encode_output_chs2 = [
         #     320,
         #     320,
@@ -276,26 +279,135 @@ class VTON_BaseUNet(UNetModel):
         #     1280, 
         #     1280
         # ]
-
-
         
-        for idx, (in_ch, cont_ch) in enumerate(zip(self.encode_output_chs, self.encode_output_chs2)):
+        #1. spatial attention dimension (control feature map output, diffusion feature map output)
+        self.control_output_chs = [
+            320,   #0
+            320,
+            320,
+            320,   #3
+            640, 
+            640, 
+            640,   #6
+            1280, 
+            1280, 
+            1280, 
+            1280,
+            1280,   
+            640,    
+            640, 
+            640,
+            320,
+            320,            
+            320,
+        ]
+        
+        self.diffusion_output_chs = [
+            320,   #0
+            320,
+            320,
+            320,   #3
+            640, 
+            640, 
+            640,   #6
+            1280, 
+            1280, 
+            1280, 
+            1280,
+            1280,   
+            640,    
+            640, 
+            640,
+            320,
+            320,            
+            320,
+        ]
+        
+        self.encoder_output_chs = [
+            320,   #0
+            320,
+            320,
+            320,   #3
+            640, 
+            640, 
+            640,   #6
+            1280, 
+            1280,             
+        ]
+        self.decoder_output_chs = [
+            1280, 
+            1280,
+            1280,   
+            640,    
+            640, 
+            640,
+            320,
+            320,            
+            320,
+        ]
+        
+        
+            # #controlnet(context_dim)
+            # #encoder
+            # 320,   #0
+            # 320,
+            # 320,
+            # 320,   #3
+            # 640, 
+            # 640, 
+            # 640,   #6
+            # 1280, 
+            # 1280,            
+            # #1280,   #9
+            # #1280,   #10
+            # #1280,   #11
+            
+            # #add middle block!!!
+            
+            # #decoder    
+            # #1280,  #0
+            # #1280,  #1
+            # #1280,  #2
+            # 1280, 
+            # 1280,
+            # 1280,   
+            # 640,    
+            # 640, 
+            # 640,
+            # 320,
+            # 320,            
+            # 320,          
+        for idx, (in_ch, cont_ch) in enumerate(zip(self.control_output_chs, self.diffusion_output_chs)):
             dim_head = in_ch // self.num_heads
             dim_head = dim_head // dim_head_denorm
             warp_flow_blks.append(CustomSpatialTransformer(
-                in_channels=in_ch,                  #controlnet encoder
+                in_channels=in_ch,                  #base unet decoder
                 n_heads=self.num_heads,
                 d_head=dim_head,
                 depth=self.transformer_depth,
-                context_dim=cont_ch,                #base unet decoder
+                context_dim=cont_ch,                #controlnet encoder
                 use_linear=self.use_linear_in_transformer,
                 use_checkpoint=self.use_checkpoint,
-                use_loss=idx%3 == 1,
+                #use_loss=idx%3 == 1,
             ))
             warp_zero_convs.append(self.make_zero_conv(in_ch))
-        self.warp_flow_blks = nn.ModuleList(reversed(warp_flow_blks))
-        self.warp_zero_convs = nn.ModuleList(reversed(warp_zero_convs))
+            print(f"idx : {idx}")
+        self.warp_flow_blks = nn.ModuleList(warp_flow_blks)
+        self.warp_zero_convs = nn.ModuleList(warp_zero_convs)
         self.use_atv_loss = use_atv_loss
+        len_encoder = len(self.encoder_output_chs)
+        
+        print(f"len(control_output_chs) : {len(self.control_output_chs)}")
+        print(f"len(diffusion_output_chs) : {len(self.diffusion_output_chs)}")       
+        
+        print(f"self.input_blocks[:len_encoder] : {len(self.input_blocks[:len_encoder])}")
+        print(f"self.warp_flow_blks[:len_encoder] : {len(self.warp_flow_blks[:len_encoder])}")
+        print(f"self.warp_zero_convs[:len_encoder] : {len(self.warp_zero_convs[:len_encoder])}")
+        
+        print(f"self.input_blocks[] : {len(self.input_blocks)}")
+        print(f"self.warp_flow_blks[] : {len(self.warp_flow_blks)}")
+        print(f"self.warp_zero_convs[] : {len(self.warp_zero_convs)}")
+        
     def make_zero_conv(self, channels):
         return zero_module(conv_nd(2, channels, channels, 1, padding=0))
     def forward(self, x, timesteps=None, context=None, control=None, only_mid_control=False, **kwargs):
@@ -307,35 +419,54 @@ class VTON_BaseUNet(UNetModel):
             t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
             emb = self.time_embed(t_emb)
             h = x.type(self.dtype)
-            for module in self.input_blocks:
-                h = module(h, emb, context)
-                hs.append(h)
-            h = self.middle_block(h, emb, context)
-
-        if control is not None:                 
-            hint = control.pop()
-        # resolution 8 is skipped
-        for module in self.output_blocks[:3]:
-            control.pop()
-            h = torch.cat([h, hs.pop()], dim=1)
-            h = module(h, emb, context)
-        # 13 - 4 = 9
-        n_warp = len(self.encode_output_chs)
-        for i, (module, warp_blk, warp_zc) in enumerate(zip(self.output_blocks[3:n_warp+3], self.warp_flow_blks, self.warp_zero_convs)):
+            len_encoder = len(self.encoder_output_chs)
+            len_decoder = len(self.decoder_output_chs)
+        
+        # 1. input_block 0 ~ 8 : attention
+        for i, (module, warp_blk, warp_zc) in enumerate(zip(self.input_blocks[:len_encoder], self.warp_flow_blks[:len_encoder], self.warp_zero_convs[:len_encoder])):
             if control is None or (h.shape[-2] == 8 and h.shape[-1] == 6):
                 assert 0, f"shape is wrong : {h.shape}"
             else:
-                hint = control.pop()
+                hint = control.pop(0)
+                h = module(h, emb, context)
                 h, attn_loss = self.warp(h, hint, warp_blk, warp_zc, mask1=mask1, mask2=mask2)
                 loss += attn_loss
-                h = torch.cat([h, hs.pop()], dim=1)
+                hs.append(h)
+            
+        # 2. input_blocks 9 ~ 11 : no attention
+        for module in self.input_blocks[len_encoder:]:
+            control.pop(0)
             h = module(h, emb, context)
-        for module in self.output_blocks[n_warp+3:]:
-            if control is None:
-                h = torch.cat([h, hs.pop()], dim=1)                                          
+            hs.append(h)
+        
+        # 3. middle block : no attention
+        h = self.middle_block(h, emb, context)
+        if control is not None:                 
+            hint = control.pop(0)    #middle blocks remove
+            
+        # 4. output_blocks 0 ~ 3 : no attention
+        for module in self.output_blocks[:3]:
+            control.pop(0)           #controlnet last 3 block remove
+            h = torch.cat([h, hs.pop()], dim=1)
+            h = module(h, emb, context)
+            
+        # 5. output_blocks 4 ~ 11 : attention        
+        for i, (module, warp_blk, warp_zc) in enumerate(zip(self.output_blocks[3:len_decoder+3], self.warp_flow_blks[len_decoder:], self.warp_zero_convs[len_decoder:])):
+            if control is None or (h.shape[-2] == 8 and h.shape[-1] == 6):
+                assert 0, f"shape is wrong : {h.shape}"
             else:
+                hint = control.pop(0)
                 h = torch.cat([h, hs.pop()], dim=1)
-            h = module(h, emb, context)
+                h = module(h, emb, context)
+                h, attn_loss = self.warp(h, hint, warp_blk, warp_zc, mask1=mask1, mask2=mask2)
+                loss += attn_loss
+        # for module in self.output_blocks[len_decoder+3:]:
+        #     print(f"111111111111111111111111111111111111111")
+        #     if control is None:
+        #         h = torch.cat([h, hs.pop()], dim=1)
+        #     else:
+        #         h = torch.cat([h, hs.pop()], dim=1)
+        #     h = module(h, emb, context)
         h = h.type(x.dtype)
         if self.use_atv_loss:
             return self.out(h), loss
