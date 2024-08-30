@@ -28,7 +28,7 @@ class ControlLDM(LatentDiffusion):
             all_unlocked=False,
             config_name="",
             control_scales=None,
-            use_pbe_weight=False,
+            use_pbe_weight=False,            
             u_cond_percent=0.0,
             img_H=512,
             img_W=384,
@@ -38,6 +38,7 @@ class ControlLDM(LatentDiffusion):
             always_learnable_param=False,
             mask1_key="",
             mask2_key="",
+            use_control_net=True,
             *args, 
             **kwargs
         ):
@@ -68,9 +69,11 @@ class ControlLDM(LatentDiffusion):
         self.all_unlocked = all_unlocked
         self.gmm = None
         self.clothflow = None
+        self.use_control_net = use_control_net
     @torch.no_grad()
     def get_input(self, batch, k, bs=None, *args, **kwargs):
         x, c = super().get_input(batch, self.first_stage_key, *args, **kwargs)
+        # x = batch[key], c = xc(cloth) <- no epsilon
         if isinstance(self.control_key, omegaconf.listconfig.ListConfig):
             control_lst = []
             for key in self.control_key:
@@ -272,6 +275,7 @@ class ControlLDM(LatentDiffusion):
     def configure_optimizers(self):
         lr = self.learning_rate
         print("=====configure optimizer=====")
+        params = []
         if self.pbe_train_mode:
             print("pbe train mode")
             params = list(self.model.parameters())
@@ -287,8 +291,11 @@ class ControlLDM(LatentDiffusion):
             opt = torch.optim.AdamW(params, lr=lr)
             print("============================")
             return opt
-        params = list(self.control_model.parameters())
-        print("control model is added")
+        if self.use_control_net:
+            params = list(self.control_model.parameters())
+            print("control model is added")
+        else:
+            print("control model don't update")
         if self.all_unlocked:
             params += list(self.model.parameters())
             print("Unet is added")

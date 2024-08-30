@@ -102,7 +102,8 @@ def main(args):
                 x_sample_img = repaint_agn_img * repaint_agn_mask_img + x_sample_img * (1-repaint_agn_mask_img)
                 x_sample_img = np.uint8(x_sample_img)
 
-            to_path = opj(save_dir, f"{fn.split('.')[0]}_{cloth_fn.split('.')[0]}.jpg")
+            #to_path = opj(save_dir, f"{fn.split('.')[0]}_{cloth_fn.split('.')[0]}.jpg")
+            to_path = opj(save_dir, f"{fn.split('.')[0]}.jpg")
             cv2.imwrite(to_path, x_sample_img[:,:,::-1])
 
 if __name__ == "__main__":

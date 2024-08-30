@@ -22,6 +22,7 @@ model:
     use_lastzc: True
     use_imageCLIP: True
     use_pbe_weight: True
+    use_control_net: True
     u_cond_percent: 0.2
     use_attn_mask: False
     mask1_key: "gt_cloth_warped_mask"
@@ -94,7 +95,7 @@ model:
     cond_stage_config:
       target: ldm.modules.image_encoders.modules.FrozenCLIPImageEmbedder
 dataset_name: VITONHDDataset
-resume_path: ./ckpts/VITONHD_PBE_pose.ckpt
+resume_path: ./ckpts/updated_initial_checkpoint.ckpt
 default_prompt: ""
 log_images_kwargs:
   unconditional_guidance_scale: 5.0
