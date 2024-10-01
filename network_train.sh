@@ -13,10 +13,10 @@ python network_train.py \
  --save_name Base \
  --resume_path ./ckpts/updated_initial_checkpoint.ckpt \
  --max_epochs 1000 \
- --save_every_n_epochs 100 \
+ --save_every_n_epochs 200 \
  --no_strict_load \
  --batch_size 24 \
- --learning_rate 1e-6
+ --learning_rate 1e-5
 
  #--resume_path ./ckpts/updated_initial_checkpoint.ckpt \
 

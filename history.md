@@ -12,3 +12,19 @@
  2. 이렇게 바꾸면 network_train.py 에 223줄에 trainer 매개변수로 resume_from_checkpoint=args.resume_path 이걸 지워줘야함. resume 할때만 넣어줘야함
 
 이 다음은 --repaint를 추가해서 해주어야함.
+
+### 2024.08.30
+ 1. Controlnet에서 cross attention 하는 부분을 spatial attention으로 변경할것
+
+### 2024.09.28
+ 1. configs/DGIST.yaml 파일안에 아래 부분 수정함
+
+ cond_stage_config:
+      target: ldm.modules.image_encoders.dino.FrozenDinoV2Encoder
+      weight: weight/dinov2_vitg14_pretrain.pth
+      #target: ldm.modules.image_encoders.modules.FrozenCLIPImageEmbedder
+
+ 2. 그리고 ./dinov2 폴더 추가함
+ 3. ldm/modules/image_encoders/dino.py 추가함
+ 4. weights/dinov2_vitg14_pretrain.pth 추가함
+ 위 세가지 버전 돌린것이 logs/20240928_Base에 저장함

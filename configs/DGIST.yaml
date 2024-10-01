@@ -93,7 +93,9 @@ model:
       scale: 1.0
 
     cond_stage_config:
-      target: ldm.modules.image_encoders.modules.FrozenCLIPImageEmbedder
+      target: ldm.modules.image_encoders.dino.FrozenDinoV2Encoder
+      weight: weight/dinov2_vitg14_pretrain.pth
+      #target: ldm.modules.image_encoders.modules.FrozenCLIPImageEmbedder
 dataset_name: VITONHDDataset
 resume_path: ./ckpts/updated_initial_checkpoint.ckpt
 default_prompt: ""
