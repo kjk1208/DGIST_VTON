@@ -9,7 +9,20 @@
 
 ### 2024.08.10
  1. attention만 학습 하는게 아니라 controlnet을 학습하도록 설정함(DGIST.yaml 파일에 use_control_net = true). lr : 1e-6
+     1) cldm.py에서 41번 줄에 use_control_net=True, 을 추가
+     2) 72번 줄에 self.use_control_net = use_control_net 추가
+     3) 294번 줄에 
+        params = list(self.control_model.parameters())
+        print("control model is added")
+        을 지우고 아래 내용을 추가함
+        if self.use_control_net:
+            params = list(self.control_model.parameters())
+            print("control model is added")
+        else:
+            print("control model don't update")
+     4) cldm/warping_cldm_network.py도 
  2. 이렇게 바꾸면 network_train.py 에 223줄에 trainer 매개변수로 resume_from_checkpoint=args.resume_path 이걸 지워줘야함. resume 할때만 넣어줘야함
+ 3. 즉 이게 UNet 추가한 최종 버전인데 1e-5는 어디있지?
 
 이 다음은 --repaint를 추가해서 해주어야함.
 
@@ -28,3 +41,15 @@
  3. ldm/modules/image_encoders/dino.py 추가함
  4. weights/dinov2_vitg14_pretrain.pth 추가함
  위 세가지 버전 돌린것이 logs/20240928_Base에 저장함
+
+ 5. lr = 1e-05로 해서 위 과정을 추가한것이 logs/20240928_Base 폴더에 저장된것임
+
+ ### 2024.10.09
+
+ 6. lr = 1e-04로 해서 위 과정을 추가한것이 logs/20241009_Base 폴더에 저장된것임, 그러나 nan이 떠서 그냥 490epoch에서 꺼버렸음.
+
+ ### 2024.10.14
+ 7. lr = 1e-06로 해서 위 과정을 추가한것이 logs/20241014_Base 폴더에 저장된것임, 20241025에 종료됨 약 11일 걸림
+
+ ### 2024.10.25
+ 8. lr = 3e-05로 해서 위 과정을 추가한것이 logs/20241025_Base 폴더에 저장된것임

@@ -2,11 +2,12 @@
 CUDA_VISIBLE_DEVICES=0 python inference.py \
  --config_path ./configs/DGIST.yaml \
  --batch_size 50 \
- --model_load_path /home/kjk/DGIST_VTON/logs/20240707_Base/[Train]_[epoch=99]_[train_loss_epoch=0.0499].ckpt \
- --save_dir ./inference/20240707_Base_repaint/ \
+ --model_load_path /data/kjk1208/DGIST_VTON/ControlnetDecoder_CrossAttention/20240810_Base/models/[Train]_[epoch=999]_[train_loss_epoch=0.0510].ckpt \
+ --save_dir ./inference/20240810_Base/ \
  --data_root_dir ./DATA/VITON-HD \
  
  #--repaint
+ #--model_load_path /home/kjk/DGIST_VTON/logs/20241014_Base/models/[Train]_[epoch=999]_[train_loss_epoch=0.0513].ckpt \
  #--model_load_path /home/kjk/DGIST_VTON/logs/20240707_Base/[Train]_[epoch=999]_[train_loss_epoch=0.0504].ckpt \
 
 
