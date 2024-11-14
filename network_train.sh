@@ -16,7 +16,7 @@ python network_train.py \
  --save_every_n_epochs 200 \
  --no_strict_load \
  --batch_size 24 \
- --learning_rate 3e-5
+ --learning_rate 5e-5
 
  #--resume_path ./ckpts/updated_initial_checkpoint.ckpt \
 

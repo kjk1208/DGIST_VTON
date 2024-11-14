@@ -27,7 +27,7 @@ import os
 # Load the checkpoint
 #checkpoint_path = '../ckpts/VITONHD_modified.ckpt'
 #checkpoint_path = '../ckpts/paintnet_365_20240517.ckpt'
-checkpoint_path = '../ckpts/initial_checkpoint.ckpt'
+checkpoint_path = '/data/kjk1208/DGIST_VTON/ControlnetDecoder_CrossAttention/20241025_Base/models/[Train]_[epoch=999]_[train_loss_epoch=0.0363].ckpt'
 checkpoint = torch.load(checkpoint_path)
 
 # Access the state dictionary
