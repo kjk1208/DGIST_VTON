@@ -127,7 +127,13 @@ def main_worker(args):
 
     model.learning_rate = args.learning_rate
     model.sd_locked = args.sd_locked
-    model.only_mid_control = args.only_mid_control        
+    model.only_mid_control = args.only_mid_control
+
+    # 20240607 모델 초기 weight 저장
+    # save_path = opj(args.model_save_dir, 'initial_checkpoint.ckpt')
+    # torch.save(model.state_dict(), save_path)
+
+    # return
     
     
     #모델 구조 보기 20240522

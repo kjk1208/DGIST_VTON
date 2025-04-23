@@ -422,7 +422,7 @@ class VTON_BaseUNet(UNetModel):
             len_encoder = len(self.encoder_output_chs)
             len_decoder = len(self.decoder_output_chs)
         
-        # 1. input_block 0 ~ 8 : attention
+        # 1. input_block 0 ~ 8 : do attention
         for i, (module, warp_blk, warp_zc) in enumerate(zip(self.input_blocks[:len_encoder], self.warp_flow_blks[:len_encoder], self.warp_zero_convs[:len_encoder])):
             if control is None or (h.shape[-2] == 8 and h.shape[-1] == 6):
                 assert 0, f"shape is wrong : {h.shape}"
@@ -450,7 +450,7 @@ class VTON_BaseUNet(UNetModel):
             h = torch.cat([h, hs.pop()], dim=1)
             h = module(h, emb, context)
             
-        # 5. output_blocks 4 ~ 11 : attention        
+        # 5. output_blocks 4 ~ 11 : do attention        
         for i, (module, warp_blk, warp_zc) in enumerate(zip(self.output_blocks[3:len_decoder+3], self.warp_flow_blks[len_decoder:], self.warp_zero_convs[len_decoder:])):
             if control is None or (h.shape[-2] == 8 and h.shape[-1] == 6):
                 assert 0, f"shape is wrong : {h.shape}"
@@ -461,7 +461,6 @@ class VTON_BaseUNet(UNetModel):
                 h, attn_loss = self.warp(h, hint, warp_blk, warp_zc, mask1=mask1, mask2=mask2)
                 loss += attn_loss
         # for module in self.output_blocks[len_decoder+3:]:
-        #     print(f"111111111111111111111111111111111111111")
         #     if control is None:
         #         h = torch.cat([h, hs.pop()], dim=1)
         #     else:
@@ -803,6 +802,8 @@ class WarpingControlNet(UNetModel):
         outs = []
         hs = []
         h = x.type(self.dtype)
+        
+        #input_blocks all
         for module in self.input_blocks:
             if guided_hint is not None:
                 h = module(h, emb, context)
@@ -814,14 +815,11 @@ class WarpingControlNet(UNetModel):
                 hs.append(h)
             outs.append(h)            
             
-            
-        # print(f"input : {len(outs)}")   # 12
-
+        #middle_blocks all
         h = self.middle_block(h, emb, context)
         outs.append(h)
         
-        # print(f"input + output block : {len(outs)}")    # 13
-        
+        #output_blocks all
         for module in self.output_blocks:
             h = torch.cat([h, hs.pop()], dim=1)
             h = module(h, emb, context)
