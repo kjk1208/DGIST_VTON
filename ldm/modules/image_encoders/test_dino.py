@@ -37,8 +37,8 @@ class FrozenDinoV2Encoder(AbstractEncoder):
             self.freeze()
         self.image_mean = torch.tensor([0.485, 0.456, 0.406]).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
         self.image_std =  torch.tensor([0.229, 0.224, 0.225]).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)        
-        self.projector = nn.Linear(1536,1024)
-        # self.projector = nn.Linear(1536,768).to(device)
+        #self.projector = nn.Linear(1536,1024)
+        self.projector = nn.Linear(1536,768).to(device)
 
     def freeze(self):
         self.model.eval()
