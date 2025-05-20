@@ -15,6 +15,9 @@ from cldm.model import create_model, load_state_dict
 from utils import save_args
 
 import torch
+from torch.utils.data.distributed import DistributedSampler
+import torch.distributed as dist
+
 torch.backends.cuda.enable_mem_efficient_sdp(False)
 torch.backends.cuda.enable_flash_sdp(False)
 
@@ -50,14 +53,15 @@ def build_args():
     parser.add_argument("--lambda_simple", type=float, default=1.0)
     parser.add_argument("--control_scales", nargs="+", type=float, default=None)
     parser.add_argument("--imageclip_trainable", action="store_false")
-    parser.add_argument("--no_strict_load", action="store_true")    
+    parser.add_argument("--no_strict_load", action="store_true")
+    parser.add_argument("--strategy", type=str, default="ddp", choices=["ddp", "ddp_spawn", "deepspeed", "fsdp", "auto", "dp", "none"], help="Choose a distributed training strategy")
     
     args = parser.parse_args()
     
     args.config_path = opj("./configs", f"{args.config_name}.yaml")
     args.n_gpus = len(os.environ["CUDA_VISIBLE_DEVICES"].split(","))
     args.devices = [i for i in range(args.n_gpus)]
-    args.strategy = "auto"
+    #args.strategy = "auto"
     args.sd_locked = not args.sd_unlocked
     args.no_validation = not args.use_validation
     
@@ -101,127 +105,90 @@ def build_config(args, config_path=None):
     return config
     
 def main_worker(args):
+    if args.strategy in ["ddp", "ddp_spawn"] and not dist.is_initialized():
+        dist.init_process_group(backend="nccl")
+        
+        print(f"[RANK {dist.get_rank()}] initialized world_size = {dist.get_world_size()}")
+        
     config = build_config(args)
     OmegaConf.save(config, args.config_save_path)
     model = create_model(args.config_path, config=config).cpu()
+
     if args.resume_path is not None:
-        if not args.no_strict_load:
-            model.load_state_dict(load_state_dict(args.resume_path, location="cpu"))
-        else:
-            model.load_state_dict(load_state_dict(args.resume_path, location="cpu"), strict=False)
+        ckpt = load_state_dict(args.resume_path, location="cpu")
+        model.load_state_dict(ckpt, strict=not args.no_strict_load)
     elif config.resume_path is not None:
-        if not args.no_strict_load:
-            model.load_state_dict(load_state_dict(config.resume_path, location="cpu"))
-        else:
-            model.load_state_dict(load_state_dict(config.resume_path, location="cpu"), strict=False)
-        
-    # finetuned vae load
+        ckpt = load_state_dict(config.resume_path, location="cpu")
+        model.load_state_dict(ckpt, strict=not args.no_strict_load)
+
     if args.vae_load_path is not None:
         state_dict = load_state_dict(args.vae_load_path, location="cpu")
-        new_state_dict = {}
-        for k, v in state_dict.items():
-            if "loss." not in k:
-                new_state_dict[k] = v.clone()
+        new_state_dict = {k: v.clone() for k, v in state_dict.items() if "loss." not in k}
         model.first_stage_model.load_state_dict(new_state_dict)
 
     model.learning_rate = args.learning_rate
     model.sd_locked = args.sd_locked
     model.only_mid_control = args.only_mid_control
 
-    # 20240607 모델 초기 weight 저장
-    # save_path = opj(args.model_save_dir, 'initial_checkpoint.ckpt')
-    # torch.save(model.state_dict(), save_path)
-
-    # return
-    
-    
-    #모델 구조 보기 20240522
-
-    # print(model)
-    # with open('model_structure.txt', 'w') as f:
-    #     f.write(str(model))
-    
-    # # Exit the program
-    # return
-    
-    #모델 구조 보기 20240522
-
+    # DDP용 샘플러
     train_dataset = getattr(import_module("dataset"), config.dataset_name)(
-        data_root_dir=args.data_root_dir, 
-        img_H=args.img_H, 
-        img_W=args.img_W, 
-        transform_size=args.transform_size, 
-        transform_color=args.transform_color, 
+        data_root_dir=args.data_root_dir, img_H=args.img_H, img_W=args.img_W,
+        transform_size=args.transform_size, transform_color=args.transform_color
     )
-    valid_paired_dataset = getattr(import_module("dataset"), config.dataset_name)(
-        data_root_dir=args.data_root_dir, 
-        img_H=args.img_H, 
-        img_W=args.img_W, 
-        is_test=True, 
-        is_paired=True, 
-        is_sorted=True, 
-    )
-    valid_unpaired_dataset = getattr(import_module("dataset"), config.dataset_name)(
-        data_root_dir=args.data_root_dir, 
-        img_H=args.img_H, 
-        img_W=args.img_W, 
-        is_test=True, 
-        is_paired=False, 
-        is_sorted=True, 
-    )
-      
+    train_sampler = DistributedSampler(train_dataset) if args.strategy == "ddp" else None
     train_dataloader = DataLoader(
         train_dataset,
-        num_workers=4, 
-        batch_size=max(args.batch_size//args.n_gpus, 1), 
-        shuffle=True, 
-        pin_memory=True
+        sampler=train_sampler,
+        shuffle=(train_sampler is None),
+        batch_size=max(args.batch_size // args.n_gpus, 1),
+        num_workers=10,
+        pin_memory=True,
+        #prefetch_factor=1,
+        #persistent_workers=False,
+        #multiprocessing_context="spawn",
     )
-    valid_paired_dataloader = DataLoader(
-        valid_paired_dataset, 
-        num_workers=4, 
-        batch_size=max(args.batch_size//args.n_gpus, 1), 
-        shuffle=False, 
-        pin_memory=True
+
+    # Validation dataloader (shuffled False)
+    valid_paired_dataset = getattr(import_module("dataset"), config.dataset_name)(
+        data_root_dir=args.data_root_dir, img_H=args.img_H, img_W=args.img_W,
+        is_test=True, is_paired=True, is_sorted=True
     )
-    valid_unpaired_dataloader = DataLoader(
-        valid_unpaired_dataset, 
-        num_workers=4, 
-        batch_size=max(args.batch_size//args.n_gpus, 1), 
-        shuffle=False, 
-        pin_memory=True
+    valid_unpaired_dataset = getattr(import_module("dataset"), config.dataset_name)(
+        data_root_dir=args.data_root_dir, img_H=args.img_H, img_W=args.img_W,
+        is_test=True, is_paired=False, is_sorted=True
     )
-    
-    #### trainer >>>>
-    img_logger = ImageLogger(
-        batch_frequency=args.logger_freq,
-        save_dir=args.img_save_dir,
-        log_images_kwargs=config.get("log_images_kwargs", None)
-    )
+    valid_paired_sampler = DistributedSampler(valid_paired_dataset, shuffle=False) if args.strategy == "ddp" else None
+    valid_unpaired_sampler = DistributedSampler(valid_unpaired_dataset, shuffle=False) if args.strategy == "ddp" else None
+    valid_paired_dataloader = DataLoader(valid_paired_dataset, sampler=valid_paired_sampler, shuffle=False, batch_size=max(args.batch_size // args.n_gpus, 1), num_workers=4, pin_memory=True)
+    valid_unpaired_dataloader = DataLoader(valid_unpaired_dataset, sampler=valid_unpaired_sampler, shuffle=False, batch_size=max(args.batch_size // args.n_gpus, 1), num_workers=4, pin_memory=True)
+
+    # Loggers
+    img_logger = ImageLogger(batch_frequency=args.logger_freq, save_dir=args.img_save_dir, log_images_kwargs=config.get("log_images_kwargs", None))
     tb_logger = TensorBoardLogger(args.tb_save_dir)
     cp_callback = ModelCheckpoint(
-        dirpath=args.model_save_dir, 
-        filename="[Train]_[{epoch}]_[{train_loss_epoch:.04f}]", 
-        save_top_k=-1, 
-        every_n_epochs=args.save_every_n_epochs, 
-        save_last=False, 
+        dirpath=args.model_save_dir,
+        filename="[Train]_[{epoch}]_[{train_loss_epoch:.04f}]",
+        save_top_k=-1,
+        every_n_epochs=args.save_every_n_epochs,
+        save_last=False,
         save_on_train_epoch_end=True
     )
 
     trainer = pl.Trainer(
-        precision=args.precision, 
-        callbacks=[img_logger, cp_callback], 
-        logger=tb_logger, 
+        precision=args.precision,
+        callbacks=[img_logger, cp_callback],
+        logger=tb_logger,
         devices=args.devices,
-        accelerator="gpu", 
-        # strategy="ddp", 
-        max_epochs=args.max_epochs, 
-        accumulate_grad_batches=args.accum_iter, 
+        accelerator="gpu",
+        strategy=args.strategy,
+        max_epochs=args.max_epochs,
+        accumulate_grad_batches=args.accum_iter,
         check_val_every_n_epoch=args.valid_epoch_freq,
-        num_sanity_val_steps=args.num_sanity_val_steps
+        num_sanity_val_steps=args.num_sanity_val_steps,
+        enable_progress_bar=True,
+        enable_model_summary=True,
     )
-    #### trainer <<<<
-    
+
     if not args.no_validation:
         trainer.fit(model, train_dataloader, [valid_paired_dataloader, valid_unpaired_dataloader])
     else:
@@ -229,6 +196,7 @@ def main_worker(args):
 
 if __name__ == "__main__":
     args = build_args()
+    # args.strategy = "ddp"  # DDP 명시
     print(args)
     save_args(args, args.args_save_path)
     main_worker(args)

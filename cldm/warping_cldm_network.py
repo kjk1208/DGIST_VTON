@@ -391,22 +391,22 @@ class VTON_BaseUNet(UNetModel):
                 #use_loss=idx%3 == 1,
             ))
             warp_zero_convs.append(self.make_zero_conv(in_ch))
-            print(f"idx : {idx}")
+            # print(f"idx : {idx}")
         self.warp_flow_blks = nn.ModuleList(warp_flow_blks)
         self.warp_zero_convs = nn.ModuleList(warp_zero_convs)
         self.use_atv_loss = use_atv_loss
         len_encoder = len(self.encoder_output_chs)
         
-        print(f"len(control_output_chs) : {len(self.control_output_chs)}")
-        print(f"len(diffusion_output_chs) : {len(self.diffusion_output_chs)}")       
+        # print(f"len(control_output_chs) : {len(self.control_output_chs)}")
+        # print(f"len(diffusion_output_chs) : {len(self.diffusion_output_chs)}")       
         
-        print(f"self.input_blocks[:len_encoder] : {len(self.input_blocks[:len_encoder])}")
-        print(f"self.warp_flow_blks[:len_encoder] : {len(self.warp_flow_blks[:len_encoder])}")
-        print(f"self.warp_zero_convs[:len_encoder] : {len(self.warp_zero_convs[:len_encoder])}")
+        # print(f"self.input_blocks[:len_encoder] : {len(self.input_blocks[:len_encoder])}")
+        # print(f"self.warp_flow_blks[:len_encoder] : {len(self.warp_flow_blks[:len_encoder])}")
+        # print(f"self.warp_zero_convs[:len_encoder] : {len(self.warp_zero_convs[:len_encoder])}")
         
-        print(f"self.input_blocks[] : {len(self.input_blocks)}")
-        print(f"self.warp_flow_blks[] : {len(self.warp_flow_blks)}")
-        print(f"self.warp_zero_convs[] : {len(self.warp_zero_convs)}")
+        # print(f"self.input_blocks[] : {len(self.input_blocks)}")
+        # print(f"self.warp_flow_blks[] : {len(self.warp_flow_blks)}")
+        # print(f"self.warp_zero_convs[] : {len(self.warp_zero_convs)}")
         
     def make_zero_conv(self, channels):
         return zero_module(conv_nd(2, channels, channels, 1, padding=0))

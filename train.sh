@@ -1,11 +1,11 @@
 # VITONHD base
-export CUDA_VISIBLE_DEVICES=0,1
+export CUDA_VISIBLE_DEVICES=0,1,2,3
 #
 conda activate DGIST_VTON
 
 # Base Training, 1000 epochs
 python train.py \
- --config_name VITONHD \
+ --config_name DGIST \
  --transform_size shiftscale hflip \
  --transform_color hsv bright_contrast \
  --save_name Base \

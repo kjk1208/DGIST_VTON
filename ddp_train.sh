@@ -1,14 +1,12 @@
 #!/bin/bash
 
-# export PYTHONPATH=$(pwd)
-# CUDA_VISIBLE_DEVICES=0 python cldm/cldm.py
-
 export CUDA_VISIBLE_DEVICES=0,1
 
+eval "$(conda shell.bash hook)"
 conda activate vton
 
 # Base Training, 1000 epochs
-python network_train.py \
+torchrun --nproc_per_node=2 ddp_train.py \
  --config_name DGIST \
  --transform_size shiftscale hflip \
  --transform_color hsv bright_contrast \
@@ -17,8 +15,9 @@ python network_train.py \
  --max_epochs 1000 \
  --save_every_n_epochs 200 \
  --no_strict_load \
- --batch_size 15 \
- --learning_rate 2e-5
+ --batch_size 45 \
+ --learning_rate 1.5e-4 \
+ --strategy ddp
 
 
  #--resume_path /data/StableVITON/logs/20240326_Base/models/[Train]_[epoch=999]_[train_loss_epoch=0.0404].ckpt\
